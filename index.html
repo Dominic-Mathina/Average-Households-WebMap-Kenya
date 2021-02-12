@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0,   maximum-scale=1.0, user-scalable=no"
+    />
+    <title>My Web Map</title>
+    <link rel="stylesheet" href="css/leaflet.css" />
+    <script src="js/leaflet.js"></script>
+    <!-- load geoJSON from external file -->
+    <script src="countiesgeojson.js"></script>
+    <!-- general styling -->
+    <style>
+      body {
+        padding: 0;
+        margin: 0;
+      }
+      html,
+      body,
+      #map {
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      const map = L.map("map").setView([-1.27, 36.81], 5);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution:
+          '&copy; <a href = "https://' +
+          'www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(map);
+
+      // obtain style dynamically
+      function county_style(feature) {
+        return {
+          color: "red",
+          weight: 2,
+          fillColor: county_color(feature.properties.Average),
+          fillOpacity: 0.7,
+          opacity: 2,
+        };
+      }
+
+      //function that returns the appropriate color
+      function county_color(county_name) {
+        if (county_name >= 2.9 && county_name <= 4.2) return "#ffeda0";
+        else if (county_name > 4.2 && county_name <= 5.5) return "#feb24c";
+        else if (county_name > 5.5 && county_name <= 6.9) return "#f03b20";
+        else return "grey";
+      }
+
+      //determination of the average, minimum and maximum values
+      function averageHousehold(counties) {
+        const ft = counties.features;
+        let avg = [];
+        for (i = 0; i < ft.length; i++) {
+          const prop = ft[i].properties;
+          const population = prop.pop2019;
+          const household = prop.hh2019;
+          const avghhsz = (population / household).toFixed(1);
+          avg.push(avghhsz);
+        }
+        const minimumValue = Math.min(...avg);
+        console.log(minimumValue);
+        const maximumValue = Math.max(...avg);
+        console.log(maximumValue);
+      }
+      averageHousehold(counties); //call the function
+
+      //goeJSON function makes the Average property available in the object
+      L.geoJSON(counties, {
+        onEachFeature: function (feature, layer) {
+          const prop = feature.properties;
+
+          const population = prop.pop2019;
+          const household = prop.hh2019;
+          const avghhsz = (population / household).toFixed(1);
+          prop["Average"] = avghhsz;
+
+          layer.bindPopup(avghhsz);
+        },
+      }).addTo(map);
+
+      //goeJSON function for styling instead of using the asynchronous approach
+      L.geoJSON(counties, {
+        style: county_style,
+        onEachFeature: function (feature, layer) {
+          const prop1 = feature.properties;
+
+          const population1 = prop1.pop2019;
+          const household1 = prop1.hh2019;
+          const avghhsz1 = (population1 / household1).toFixed(1);
+          prop1["Average1"] = avghhsz1;
+
+          layer.bindPopup(avghhsz1);
+        },
+      }).addTo(map);
+
+      //North arrow
+      var north = L.control({ position: "bottomright" });
+      north.onAdd = function (map) {
+        var div = L.DomUtil.create("div", "north-arrow");
+        div.innerHTML =
+          '<img src="images/northarrow.png" width="50px" height="50px" >';
+        return div;
+      };
+      north.addTo(map);
+      //scalebar
+      L.control.scale().addTo(map);
+      //legend
+      var legend = L.control({ position: "bottomright" });
+      legend.onAdd = function (map) {
+        var div = L.DomUtil.create("div", "legend"),
+          avghh = [2.9, 4.2, 5.5, 6.9],
+          labels = [];
+        // loop through avghh and generate a label with a colored square for each interval
+        for (var i = 0; i < avghh.length; i++) {
+          div.innerHTML +=
+            '<i style="background-color: ' +
+            county_color(avghh[i] + 1) +
+            console.log(county_color(avghh[i]) + 1) +
+            '"></i>' +
+            avghh[i] +
+            (avghh[i + 1] ? "&ndash;" + avghh[i + 1] + "<br>" : "+");
+        }
+        return div;
+      };
+      legend.addTo(map);
+
+      //Add Map title
+      var title = L.control({ position: "topcenter" });
+      title.onAdd = function (map) {
+        var div = L.DomUtil.create("div", "title");
+        div.innerHTML = "<h1>Kenya Population by households</h1>";
+        return div;
+      };
+      title.addTo(map);
+    </script>
+  </body>
+</html>
